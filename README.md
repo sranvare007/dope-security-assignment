@@ -5,6 +5,7 @@ A performant React + TypeScript table application that efficiently renders and m
 ## 🚀 Features
 
 ### Core Functionality
+
 - ✅ **Efficient Rendering**: Handles 1000+ rows with optimized performance
 - ✅ **Row Selection**: Multi-select with individual and "select all" checkboxes
 - ✅ **Health Status Filtering**: Multi-select dropdown filter for Healthy/Injured/Critical
@@ -15,6 +16,7 @@ A performant React + TypeScript table application that efficiently renders and m
 - ✅ **Accessibility**: ARIA labels, keyboard navigation, and semantic HTML
 
 ### Technical Features
+
 - 📝 **TypeScript**: Fully typed with strict type checking
 - 🧪 **Test Coverage**: Comprehensive Vitest tests with @testing-library
 - 🎨 **Clean UI/UX**: Modern, responsive design with smooth interactions
@@ -24,20 +26,20 @@ A performant React + TypeScript table application that efficiently renders and m
 
 ## 📋 Requirements Met
 
-| Requirement | Status | Implementation |
-|------------|--------|----------------|
-| Render 1000 rows efficiently | ✅ | Optimized rendering with React hooks |
-| Selection column with checkboxes | ✅ | Individual + Select All functionality |
-| Health filter dropdown | ✅ | Multi-select filter with icon |
-| Mark as viewed/unviewed | ✅ | Console logs selected IDs, works with filters |
-| Real-time search | ✅ | Searches name and location |
-| Loading state | ✅ | Spinner with accessible label |
-| Power level sorting | ✅ | Chevron icon for asc/desc/none |
-| Jest tests | ✅ | Vitest with comprehensive test cases |
-| TypeScript | ✅ | Full type safety |
-| Clean code | ✅ | Modular, maintainable architecture |
-| Accessibility | ✅ | ARIA labels, semantic HTML |
-| README | ✅ | This document |
+| Requirement                      | Status | Implementation                                |
+| -------------------------------- | ------ | --------------------------------------------- |
+| Render 1000 rows efficiently     | ✅     | Optimized rendering with React hooks          |
+| Selection column with checkboxes | ✅     | Individual + Select All functionality         |
+| Health filter dropdown           | ✅     | Multi-select filter with icon                 |
+| Mark as viewed/unviewed          | ✅     | Console logs selected IDs, works with filters |
+| Real-time search                 | ✅     | Searches name and location                    |
+| Loading state                    | ✅     | Spinner with accessible label                 |
+| Power level sorting              | ✅     | Chevron icon for asc/desc/none                |
+| Jest tests                       | ✅     | Vitest with comprehensive test cases          |
+| TypeScript                       | ✅     | Full type safety                              |
+| Clean code                       | ✅     | Modular, maintainable architecture            |
+| Accessibility                    | ✅     | ARIA labels, semantic HTML                    |
+| README                           | ✅     | This document                                 |
 
 ## 🛠️ Tech Stack
 
@@ -87,25 +89,31 @@ npm run lint
 ## 🎯 Usage
 
 ### Search
+
 Type in the search box to filter characters by name or location in real-time.
 
 ### Filter by Health
+
 1. Click the filter icon in the "Health" column header
 2. Select one or more health statuses (Healthy, Injured, Critical)
 3. Table updates automatically
 
 ### Sort by Power
+
 Click the sort icon in the "Power" column header to cycle through:
+
 - No sort (original order)
 - Ascending (lowest to highest)
 - Descending (highest to lowest)
 
 ### Select Rows
+
 - Click individual checkboxes to select specific rows
 - Use the header checkbox to select/deselect all visible rows
 - Selected count shows in the action buttons
 
 ### Mark as Viewed/Unviewed
+
 1. Select one or more rows
 2. Click "Mark as Viewed" or "Mark as Unviewed"
 3. Selected character IDs are logged to the browser console
@@ -168,6 +176,7 @@ npm run storybook
 ```
 
 Storybook will start on http://localhost:6006/ where you can:
+
 - Browse all components and their variants
 - Interact with components in isolation
 - View component documentation
@@ -197,6 +206,7 @@ The project includes comprehensive tests covering:
 - ✅ No results message
 
 Run tests with:
+
 ```bash
 npm test          # Watch mode
 npm run test:ui   # UI mode with browser
@@ -206,11 +216,13 @@ npm run test:run  # Single run (CI)
 ## 🎨 Design Decisions
 
 ### Performance Optimization
+
 - **useMemo**: Memoized filtering and sorting operations
 - **useCallback**: Stable function references to prevent re-renders
 - **Efficient State**: Minimal re-renders with Set for selections
 
 ### Accessibility
+
 - Semantic HTML (table, thead, tbody)
 - ARIA labels on all interactive elements
 - Keyboard navigation support
@@ -218,6 +230,7 @@ npm run test:run  # Single run (CI)
 - Indeterminate checkbox state for partial selection
 
 ### UX Enhancements
+
 - Visual feedback for selections (row highlighting)
 - Color-coded health badges
 - Disabled state for action buttons when no selection
@@ -225,11 +238,13 @@ npm run test:run  # Single run (CI)
 - Smooth transitions and hover states
 
 ### Styling
+
 - **Tailwind CSS** for the app shell and utility-first styling (header, layout, responsive typography)
 - Component-level CSS files for complex component styles (e.g. table, scrollbars, spinners)
 - Base styles and Tailwind directives in `src/index.css`
 
 ### Code Quality
+
 - TypeScript for type safety
 - Separated concerns (components, types, styles)
 - Clean, readable code with proper naming
@@ -239,6 +254,7 @@ npm run test:run  # Single run (CI)
 ## 📱 Responsive Design
 
 The application is fully responsive and works on:
+
 - Desktop (1200px+)
 - Tablet (768px - 1199px)
 - Mobile (<768px)
@@ -270,6 +286,7 @@ vercel --prod
 ## 🔧 Configuration
 
 ### Data Format
+
 The application expects JSON data in the following format:
 
 ```json
@@ -299,3 +316,8 @@ Built as part of the DopeSecurity Frontend Assignment
 ---
 
 **Note**: This project focuses on functionality, clean code, and performance over elaborate visual design, as specified in the requirements.
+
+# Deployment
+
+The application is deployed to Vercel.
+https://dope-security-assignment.vercel.app/

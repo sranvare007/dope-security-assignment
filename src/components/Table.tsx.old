@@ -1,0 +1,317 @@
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import type { CharacterWithViewed, HealthStatus, SortOrder } from '../types';
+import './Table.css';
+
+interface TableProps {
+  data: CharacterWithViewed[];
+  isLoading: boolean;
+}
+
+const ROW_HEIGHT = 48;
+const VISIBLE_ROWS_BUFFER = 5; // Extra rows to render above/below viewport
+
+export const Table = ({ data, isLoading }: TableProps) => {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [healthFilters, setHealthFilters] = useState<Set<HealthStatus>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<SortOrder>(null);
+  const [showHealthFilter, setShowHealthFilter] = useState(false);
+  const [scrollTop, setScrollTop] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Filter and sort data
+  const filteredAndSortedData = useMemo(() => {
+    let result = [...data];
+
+    // Apply health filters
+    if (healthFilters.size > 0) {
+      result = result.filter(char => healthFilters.has(char.health));
+    }
+
+    // Apply search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        char =>
+          char.name.toLowerCase().includes(query) ||
+          char.location.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sorting
+    if (sortOrder) {
+      result.sort((a, b) => {
+        return sortOrder === 'asc' ? a.power - b.power : b.power - a.power;
+      });
+    }
+
+    return result;
+  }, [data, healthFilters, searchQuery, sortOrder]);
+
+  // Handle scroll for virtualization
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  }, []);
+
+  // Calculate visible rows for virtualization
+  const { visibleData, totalHeight, offsetY, startIndex } = useMemo(() => {
+    const containerHeight = 600; // Fixed height of scroll container
+    const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - VISIBLE_ROWS_BUFFER);
+    const endIdx = Math.min(
+      filteredAndSortedData.length,
+      Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + VISIBLE_ROWS_BUFFER
+    );
+    
+    return {
+      visibleData: filteredAndSortedData.slice(startIdx, endIdx),
+      totalHeight: filteredAndSortedData.length * ROW_HEIGHT,
+      offsetY: startIdx * ROW_HEIGHT,
+      startIndex: startIdx
+    };
+  }, [scrollTop, filteredAndSortedData]);
+
+  // Handle select all
+  const handleSelectAll = useCallback(
+    (checked: boolean) => {
+      if (checked) {
+        setSelectedIds(new Set(filteredAndSortedData.map(char => char.id)));
+      } else {
+        setSelectedIds(new Set());
+      }
+    },
+    [filteredAndSortedData]
+  );
+
+  // Handle individual row selection
+  const handleRowSelect = useCallback((id: string, checked: boolean) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Handle health filter toggle
+  const handleHealthFilterToggle = useCallback((health: HealthStatus) => {
+    setHealthFilters(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(health)) {
+        newSet.delete(health);
+      } else {
+        newSet.add(health);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Handle sort toggle
+  const handleSortToggle = useCallback(() => {
+    setSortOrder(prev => {
+      if (prev === null) return 'asc';
+      if (prev === 'asc') return 'desc';
+      return null;
+    });
+  }, []);
+
+  // Handle mark as viewed/unviewed
+  const handleMarkViewed = useCallback((viewed: boolean) => {
+    const selectedArray = Array.from(selectedIds);
+    console.log(`Marking ${viewed ? 'viewed' : 'unviewed'}:`, selectedArray);
+  }, [selectedIds]);
+
+  // Check if all visible rows are selected
+  const allSelected = filteredAndSortedData.length > 0 && 
+    filteredAndSortedData.every(char => selectedIds.has(char.id));
+  const someSelected = filteredAndSortedData.some(char => selectedIds.has(char.id));
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setShowHealthFilter(false);
+    if (showHealthFilter) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showHealthFilter]);
+
+  if (isLoading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner" aria-label="Loading data"></div>
+        <p>Loading characters...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="table-container">
+      <div className="table-controls">
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder="Search by name or location..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="search-input"
+            aria-label="Search characters"
+          />
+        </div>
+        <div className="action-buttons">
+          <button
+            onClick={() => handleMarkViewed(true)}
+            disabled={selectedIds.size === 0}
+            className="btn btn-primary"
+            aria-label="Mark selected as viewed"
+          >
+            Mark as Viewed ({selectedIds.size})
+          </button>
+          <button
+            onClick={() => handleMarkViewed(false)}
+            disabled={selectedIds.size === 0}
+            className="btn btn-secondary"
+            aria-label="Mark selected as unviewed"
+          >
+            Mark as Unviewed ({selectedIds.size})
+          </button>
+        </div>
+      </div>
+
+      <div className="table-wrapper">
+        <div className="table-header">
+          <div className="header-row">
+            <div style={{ width: '50px', padding: '12px 16px', flexShrink: 0 }}>
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={input => {
+                  if (input) input.indeterminate = someSelected && !allSelected;
+                }}
+                onChange={e => handleSelectAll(e.target.checked)}
+                aria-label="Select all rows"
+              />
+            </div>
+            <div style={{ flex: '1', padding: '12px 16px', minWidth: '200px', fontWeight: 600 }}>Name</div>
+            <div style={{ flex: '1', padding: '12px 16px', minWidth: '150px', fontWeight: 600 }}>Location</div>
+            <div style={{ flex: '1', padding: '12px 16px', minWidth: '150px', fontWeight: 600 }}>
+              <div className="header-with-filter">
+                Health
+                <button
+                  className="filter-btn"
+                  onClick={e => {
+                    e.stopPropagation();
+                    setShowHealthFilter(!showHealthFilter);
+                  }}
+                  aria-label="Filter by health status"
+                  aria-expanded={showHealthFilter}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M1.5 4.5h13M3.5 8h9M5.5 11.5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+                {showHealthFilter && (
+                  <div className="filter-dropdown" onClick={e => e.stopPropagation()}>
+                    {(['Healthy', 'Injured', 'Critical'] as HealthStatus[]).map(health => (
+                      <label key={health} className="filter-option">
+                        <input
+                          type="checkbox"
+                          checked={healthFilters.has(health)}
+                          onChange={() => handleHealthFilterToggle(health)}
+                        />
+                        <span>{health}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ flex: '1', padding: '12px 16px', minWidth: '120px', fontWeight: 600 }}>
+              <div className="header-with-sort">
+                Power
+                <button
+                  className="sort-btn"
+                  onClick={handleSortToggle}
+                  aria-label={`Sort by power ${sortOrder || 'none'}`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M8 4l3 4H5l3-4z"
+                      fill={sortOrder === 'asc' ? 'currentColor' : '#ccc'}
+                    />
+                    <path
+                      d="M8 12l3-4H5l3 4z"
+                      fill={sortOrder === 'desc' ? 'currentColor' : '#ccc'}
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {filteredAndSortedData.length === 0 ? (
+          <div className="no-results">
+            No characters found matching your criteria
+          </div>
+        ) : (
+          <div
+            ref={scrollContainerRef}
+            className="virtual-scroll-container"
+            onScroll={handleScroll}
+            style={{
+              height: 600,
+              overflow: 'auto',
+              position: 'relative'
+            }}
+          >
+            <div style={{ height: totalHeight, position: 'relative' }}>
+              <div style={{ transform: `translateY(${offsetY}px)`, willChange: 'transform' }}>
+                {visibleData.map((char, idx) => {
+                  const actualIndex = startIndex + idx;
+                  return (
+                    <div
+                      key={char.id}
+                      style={{
+                        height: ROW_HEIGHT,
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderBottom: '1px solid #f0f0f0',
+                        backgroundColor: selectedIds.has(char.id) 
+                          ? '#e7f3ff' 
+                          : actualIndex % 2 === 0 ? '#fff' : '#fafafa',
+                      }}
+                      className="virtual-row"
+                    >
+                      <div style={{ width: '50px', padding: '0 16px', flexShrink: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(char.id)}
+                          onChange={e => handleRowSelect(char.id, e.target.checked)}
+                          aria-label={`Select ${char.name}`}
+                        />
+                      </div>
+                      <div style={{ flex: '1', padding: '0 16px', minWidth: '200px' }}>{char.name}</div>
+                      <div style={{ flex: '1', padding: '0 16px', minWidth: '150px' }}>{char.location}</div>
+                      <div style={{ flex: '1', padding: '0 16px', minWidth: '150px' }}>
+                        <span className={`health-badge health-${char.health.toLowerCase()}`}>
+                          {char.health}
+                        </span>
+                      </div>
+                      <div style={{ flex: '1', padding: '0 16px', minWidth: '120px' }}>
+                        {char.power.toLocaleString()}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="table-footer">
+        Showing {filteredAndSortedData.length} of {data.length} characters
+      </div>
+    </div>
+  );
+};

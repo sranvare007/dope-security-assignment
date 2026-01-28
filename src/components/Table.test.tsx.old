@@ -1,0 +1,202 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Table } from './Table';
+import type { CharacterWithViewed } from '../types';
+
+const mockData: CharacterWithViewed[] = [
+  {
+    id: 'char_0001',
+    name: 'Naruto',
+    location: 'Konoha',
+    health: 'Healthy',
+    power: 5000,
+    viewed: false,
+  },
+  {
+    id: 'char_0002',
+    name: 'Sasuke',
+    location: 'Konoha',
+    health: 'Injured',
+    power: 4800,
+    viewed: false,
+  },
+  {
+    id: 'char_0003',
+    name: 'Gaara',
+    location: 'Suna',
+    health: 'Critical',
+    power: 4500,
+    viewed: false,
+  },
+  {
+    id: 'char_0004',
+    name: 'Rock Lee',
+    location: 'Konoha',
+    health: 'Healthy',
+    power: 3500,
+    viewed: false,
+  },
+];
+
+describe('Table Component', () => {
+  it('renders loading state', () => {
+    render(<Table data={[]} isLoading={true} />);
+    expect(screen.getByText(/loading characters/i)).toBeInTheDocument();
+  });
+
+  it('renders table with data', () => {
+    render(<Table data={mockData} isLoading={false} />);
+    expect(screen.getByText('Naruto')).toBeInTheDocument();
+    expect(screen.getByText('Sasuke')).toBeInTheDocument();
+    expect(screen.getByText('Gaara')).toBeInTheDocument();
+  });
+
+  it('filters data by search query - name', async () => {
+    const user = userEvent.setup();
+    render(<Table data={mockData} isLoading={false} />);
+
+    const searchInput = screen.getByPlaceholderText(/search by name or location/i);
+    await user.type(searchInput, 'Naruto');
+
+    await waitFor(() => {
+      expect(screen.getByText('Naruto')).toBeInTheDocument();
+      expect(screen.queryByText('Sasuke')).not.toBeInTheDocument();
+      expect(screen.queryByText('Gaara')).not.toBeInTheDocument();
+    });
+  });
+
+  it('filters data by search query - location', async () => {
+    const user = userEvent.setup();
+    render(<Table data={mockData} isLoading={false} />);
+
+    const searchInput = screen.getByPlaceholderText(/search by name or location/i);
+    await user.type(searchInput, 'Suna');
+
+    await waitFor(() => {
+      expect(screen.getByText('Gaara')).toBeInTheDocument();
+      expect(screen.queryByText('Naruto')).not.toBeInTheDocument();
+      expect(screen.queryByText('Sasuke')).not.toBeInTheDocument();
+    });
+  });
+
+  it('selects and deselects rows', async () => {
+    const user = userEvent.setup();
+    render(<Table data={mockData} isLoading={false} />);
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    const firstRowCheckbox = checkboxes[1]; // First row (skip select-all)
+
+    await user.click(firstRowCheckbox);
+    expect(firstRowCheckbox).toBeChecked();
+
+    await user.click(firstRowCheckbox);
+    expect(firstRowCheckbox).not.toBeChecked();
+  });
+
+  it('selects all rows', async () => {
+    const user = userEvent.setup();
+    render(<Table data={mockData} isLoading={false} />);
+
+    const selectAllCheckbox = screen.getAllByRole('checkbox')[0];
+    await user.click(selectAllCheckbox);
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    checkboxes.forEach(checkbox => {
+      expect(checkbox).toBeChecked();
+    });
+  });
+
+  it('logs selected IDs when marking as viewed', async () => {
+    const consoleSpy = vi.spyOn(console, 'log');
+    const user = userEvent.setup();
+    render(<Table data={mockData} isLoading={false} />);
+
+    // Select first two rows
+    const checkboxes = screen.getAllByRole('checkbox');
+    await user.click(checkboxes[1]); // Naruto
+    await user.click(checkboxes[2]); // Sasuke
+
+    const markViewedBtn = screen.getByText(/mark as viewed/i);
+    await user.click(markViewedBtn);
+
+    expect(consoleSpy).toHaveBeenCalledWith('Marking viewed:', expect.arrayContaining(['char_0001', 'char_0002']));
+    consoleSpy.mockRestore();
+  });
+
+  it('filters by health status', async () => {
+    const user = userEvent.setup();
+    render(<Table data={mockData} isLoading={false} />);
+
+    // Open health filter dropdown
+    const filterBtn = screen.getByLabelText(/filter by health status/i);
+    await user.click(filterBtn);
+
+    // Select 'Injured' filter
+    const injuredCheckbox = screen.getByRole('checkbox', { name: /injured/i });
+    await user.click(injuredCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText('Sasuke')).toBeInTheDocument();
+      expect(screen.queryByText('Naruto')).not.toBeInTheDocument();
+      expect(screen.queryByText('Gaara')).not.toBeInTheDocument();
+    });
+  });
+
+  it('sorts by power level', async () => {
+    const user = userEvent.setup();
+    render(<Table data={mockData} isLoading={false} />);
+
+    const sortBtn = screen.getByLabelText(/sort by power/i);
+    
+    // Sort ascending
+    await user.click(sortBtn);
+    const rows = screen.getAllByRole('row');
+    expect(rows[1]).toHaveTextContent('Rock Lee'); // Lowest power
+
+    // Sort descending
+    await user.click(sortBtn);
+    const rowsDesc = screen.getAllByRole('row');
+    expect(rowsDesc[1]).toHaveTextContent('Naruto'); // Highest power
+  });
+
+  it('works correctly with filters applied', async () => {
+    const consoleSpy = vi.spyOn(console, 'log');
+    const user = userEvent.setup();
+    render(<Table data={mockData} isLoading={false} />);
+
+    // Apply location filter
+    const searchInput = screen.getByPlaceholderText(/search by name or location/i);
+    await user.type(searchInput, 'Konoha');
+
+    await waitFor(() => {
+      expect(screen.queryByText('Gaara')).not.toBeInTheDocument();
+    });
+
+    // Select all visible rows
+    const selectAllCheckbox = screen.getAllByRole('checkbox')[0];
+    await user.click(selectAllCheckbox);
+
+    // Mark as viewed
+    const markViewedBtn = screen.getByText(/mark as viewed/i);
+    await user.click(markViewedBtn);
+
+    // Should only log Konoha characters
+    expect(consoleSpy).toHaveBeenCalledWith('Marking viewed:', expect.arrayContaining(['char_0001', 'char_0002', 'char_0004']));
+    expect(consoleSpy).not.toHaveBeenCalledWith('Marking viewed:', expect.arrayContaining(['char_0003']));
+    
+    consoleSpy.mockRestore();
+  });
+
+  it('shows no results message when no data matches', async () => {
+    const user = userEvent.setup();
+    render(<Table data={mockData} isLoading={false} />);
+
+    const searchInput = screen.getByPlaceholderText(/search by name or location/i);
+    await user.type(searchInput, 'NonexistentCharacter');
+
+    await waitFor(() => {
+      expect(screen.getByText(/no characters found/i)).toBeInTheDocument();
+    });
+  });
+});
